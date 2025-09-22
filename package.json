@@ -1,20 +1,16 @@
 {
-  "name": "vercel-ws-bridge",
+  "name": "ws-bridge-render",
   "version": "1.0.0",
   "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=20"
+  },
   "scripts": {
-    "dev": "next dev",
-    "build": "next build",
-    "start": "next start"
+    "start": "node server.js",
+    "dev": "node server.js"
   },
   "dependencies": {
-    "next": "^15.5.3",
-    "react": "18.3.1",
-    "react-dom": "18.3.1"
-  },
-  "devDependencies": {
-    "@types/node": "24.5.2",
-    "@types/react": "19.1.13",
-    "typescript": "5.9.2"
+    "ws": "^8.18.0"
   }
 }

@@ -15,7 +15,7 @@ Servidor WebSocket con “salas” por `code`. Listo para Render.
 5. Deploy.
 
 ### Probar
-- Abre la URL de tu servicio (p. ej. `https://tu-servicio.onrender.com/`).
+- Abre la URL de tu servicio (p. ej. `[https://tu-servicio.onrender.com/test](https://socketnuibuilder.onrender.com/test)`).
 - En consola verás logs del tester inline, o abre dos pestañas y usa la sala por defecto (`842913`).
 - Cliente WebSocket:
   ```js

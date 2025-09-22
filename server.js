@@ -47,8 +47,17 @@ const server = http.createServer((req, res) => {
       const url = 'wss://' + location.host + '/bridge?code=' + encodeURIComponent(code);
       ws = new WebSocket(url);
       ws.onopen = () => append('[OPEN] conectado a sala ' + code);
-      ws.onmessage = (e) => append(e.data);
-      ws.onerror = (e) => append('[ERROR]');
+      ws.onmessage = async (e) => {
+        if (e.data instanceof Blob) {
+          const txt = await e.data.text();
+          try { append('[IN JSON] ' + JSON.stringify(JSON.parse(txt))); }
+          catch { append('[IN] ' + txt); }
+        } else {
+          try { append('[IN JSON] ' + JSON.stringify(JSON.parse(e.data))); }
+          catch { append('[IN] ' + e.data); }
+        }
+      };
+      ws.onerror = (e) => append('[ERROR] ' + (e?.message || ''));
       ws.onclose = (e) => append('[CLOSE] ' + e.code + ' ' + (e.reason || ''));
     };
 
@@ -105,25 +114,19 @@ wss.on('connection', (ws, req) => {
   // Presencia simple
   safeSend(ws, JSON.stringify({ system: 'joined', count: set.size, code }));
 
-  ws.on('message', (data, isBinary) => {
-    // convierte a string si no es binario
-    const outgoing = isBinary ? data : data.toString();
-
-    // retransmite a todos en la sala, excepto al emisor
-    for (const c of set) {
-      if (c !== ws && c.readyState === 1) {
-        let outgoing = isBinary ? data : data.toString();
-        try {
-        // si es JSON válido, lo dejas tal cual (string)
-            JSON.parse(outgoing);
-        } catch {
-        // si no es JSON, lo conviertes en JSON
-            outgoing = JSON.stringify({ text: outgoing });
-        }
-        c.send(outgoing);
-      }
+ws.on('message', (data, isBinary) => {
+  // Normaliza el mensaje a string
+  let outgoing = isBinary ? data.toString() : data.toString();
+  // Si no es JSON válido, lo envolvemos como JSON { text }
+  try { JSON.parse(outgoing); }
+  catch { outgoing = JSON.stringify({ text: outgoing }); }
+  // Retransmite a todos en la sala menos al emisor
+  for (const c of set) {
+    if (c !== ws && c.readyState === 1) {
+      safeSend(c, outgoing);
     }
-  });
+  }
+});
 
   const cleanup = () => {
     try {

@@ -112,8 +112,15 @@ wss.on('connection', (ws, req) => {
     // retransmite a todos en la sala, excepto al emisor
     for (const c of set) {
       if (c !== ws && c.readyState === 1) {
-        // si quieres siempre string/JSON:
-        c.send(outgoing); // o JSON.stringify(JSON.parse(outgoing)) si sabes que es JSON
+        let outgoing = isBinary ? data : data.toString();
+        try {
+        // si es JSON válido, lo dejas tal cual (string)
+            JSON.parse(outgoing);
+        } catch {
+        // si no es JSON, lo conviertes en JSON
+            outgoing = JSON.stringify({ text: outgoing });
+        }
+        c.send(outgoing);
       }
     }
   });

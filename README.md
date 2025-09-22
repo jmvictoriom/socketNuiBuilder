@@ -1,71 +1,25 @@
-# Vercel WS Bridge (Edge)
+# WS Bridge (Render)
 
-Puente WebSocket sin auth, por "sala" = `code`.
+Servidor WebSocket con “salas” por `code`. Listo para Render.
 
-## Deploy
+## Despliegue en Render
 
-1. `npm i`
-2. `vercel` (o conecta repo en Vercel y deploy automático)
+1. Crea un repo con estos archivos y súbelo a GitHub.
+2. En **Render Dashboard** → **New** → **Web Service**.
+3. Conecta el repo.
+4. Configura:
+   - **Environment**: Node
+   - **Build Command**: `npm ci`  (o `npm install`)
+   - **Start Command**: `npm start`
+   - **Region**: la más cercana a tus usuarios (EU si estás en España).
+5. Deploy.
 
-## Probar en web
-- Abre el `https://tu-deploy.vercel.app/`
-- Conéctate con un `code` y envía JSON. En otra pestaña usa el mismo code y verás el mensaje.
-
-## Cliente iOS/macOS (WebSocket nativo)
-Ejemplo Swift (URLSessionWebSocketTask):
-
-```swift
-import Foundation
-
-final class WSClient: NSObject {
-    private var task: URLSessionWebSocketTask?
-    private let code: String
-    private let url: URL
-
-    init(baseURL: String, code: String) {
-        self.code = code
-        self.url = URL(string: "\(baseURL)/api/bridge?code=\(code)")!
-    }
-
-    func connect() {
-        let session = URLSession(configuration: .default, delegate: self, delegateQueue: .main)
-        self.task = session.webSocketTask(with: url)
-        self.task?.resume()
-        receive()
-    }
-
-    func send(json: [String: Any]) {
-        guard let data = try? JSONSerialization.data(withJSONObject: json) else { return }
-        task?.send(.data(data)) { error in
-            if let error = error { print("send error:", error) }
-        }
-    }
-
-    private func receive() {
-        task?.receive { [weak self] result in
-            switch result {
-            case .failure(let err):
-                print("recv error:", err)
-            case .success(let message):
-                switch message {
-                case .data(let d):
-                    if let obj = try? JSONSerialization.jsonObject(with: d) {
-                        print("JSON IN >", obj)
-                    } else {
-                        print("BIN IN >", d.count, "bytes")
-                    }
-                case .string(let s):
-                    print("STR IN >", s)
-                @unknown default: break
-                }
-            }
-            self?.receive()
-        }
-    }
-
-    func disconnect() {
-        task?.cancel(with: .goingAway, reason: nil)
-    }
-}
-
-extension WSClient: URLSessionDelegate {}
+### Probar
+- Abre la URL de tu servicio (p. ej. `https://tu-servicio.onrender.com/`).
+- En consola verás logs del tester inline, o abre dos pestañas y usa la sala por defecto (`842913`).
+- Cliente WebSocket:
+  ```js
+  const code = '842913';
+  const ws = new WebSocket(`wss://${location.host}/bridge?code=${encodeURIComponent(code)}`);
+  ws.onopen    = () => ws.send(JSON.stringify({ hello:'world', ts: Date.now() }));
+  ws.onmessage = (e) => console.log('IN', e.data);

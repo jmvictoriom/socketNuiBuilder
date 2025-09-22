@@ -47,7 +47,7 @@ const server = http.createServer((req, res) => {
       const url = 'wss://' + location.host + '/bridge?code=' + encodeURIComponent(code);
       ws = new WebSocket(url);
       ws.onopen = () => append('[OPEN] conectado a sala ' + code);
-      ws.onmessage = (e) => append('[IN] ' + e.data);
+      ws.onmessage = (e) => append(e.data);
       ws.onerror = (e) => append('[ERROR]');
       ws.onclose = (e) => append('[CLOSE] ' + e.code + ' ' + (e.reason || ''));
     };
@@ -55,7 +55,7 @@ const server = http.createServer((req, res) => {
     document.getElementById('send').onclick = () => {
       if (!ws || ws.readyState !== 1) return append('⚠ No conectado');
       const text = document.getElementById('msg').value;
-      const payload = { kind:'note', text, ts: Date.now() };
+      const payload = { text };
       ws.send(JSON.stringify(payload));
       append('[OUT] ' + JSON.stringify(payload));
       document.getElementById('msg').value = '';

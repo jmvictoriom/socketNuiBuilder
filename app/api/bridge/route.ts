@@ -1,4 +1,5 @@
 export const runtime = 'edge';
+export const dynamic = 'force-dynamic';
 
 type Client = {
   ws: WebSocket;
@@ -26,7 +27,7 @@ export async function GET(req: Request) {
   const { 0: client, 1: server } = new (globalThis as any).WebSocketPair();
   const ws = server as WebSocket;
 
-  ws.accept();
+  (ws as any).accept();
 
   const clientObj: Client = { ws, code };
   let set = rooms.get(code);

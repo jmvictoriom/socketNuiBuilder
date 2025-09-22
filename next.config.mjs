@@ -1,7 +1,3 @@
 /** @type {import('next').NextConfig} */
-const nextConfig = {
-  experimental: {
-    runtime: 'edge' // fuerza Edge runtime en rutas
-  }
-};
+const nextConfig = {};
 export default nextConfig;

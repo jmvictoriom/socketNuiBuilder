@@ -7,15 +7,19 @@
     body { font-family: sans-serif; max-width: 600px; margin: 2rem auto; }
     input, button { padding: 8px; margin: 4px 0; border-radius: 6px; border: 1px solid #ccc; }
     #log { border: 1px solid #ddd; border-radius: 6px; padding: 8px; height: 250px; overflow-y: auto; background: #fafafa; font-size: 14px; }
+    .row { display: flex; gap: 8px; align-items: center; }
   </style>
 </head>
 <body>
   <h1>Tester WebSocket</h1>
-  <label>Room code: <input id="room" value="842913" /></label><br>
-  <button id="connect">Conectar</button>
-  <br><br>
-  <input id="msg" placeholder="Escribe un mensaje..." style="width:80%" />
-  <button id="send">Enviar</button>
+  <div class="row">
+    <label>Room code: <input id="room" value="842913" /></label>
+    <button id="connect">Conectar</button>
+  </div>
+  <div class="row">
+    <input id="msg" placeholder='{"text":"hola"}' style="flex:1" />
+    <button id="send">Enviar</button>
+  </div>
 
   <h3>Log:</h3>
   <div id="log"></div>
@@ -23,37 +27,104 @@
   <script>
     let ws;
     const logBox = document.getElementById('log');
+    const roomInput = document.getElementById('room');
+    const btnConnect = document.getElementById('connect');
+    const btnSend = document.getElementById('send');
+    const msgInput = document.getElementById('msg');
+
     const append = (txt) => {
       const p = document.createElement('div');
       p.textContent = new Date().toLocaleTimeString() + ' ' + txt;
       logBox.prepend(p);
     };
 
-    document.getElementById('connect').onclick = () => {
-      const code = document.getElementById('room').value;
-      const url = `wss://socketnuibuilder.onrender.com/bridge?code=${encodeURIComponent(code)}`;
-      ws = new WebSocket(url);
-      ws.onopen = () => append('[OPEN] conectado a sala ' + code);
-      ws.onmessage = async (e) => {
-  if (e.data instanceof Blob) {
-    const txt = await e.data.text();
-    append('[IN] ' + txt);   // donde antes hacías append(e.data)
-  } else {
-    append('[IN] ' + e.data);
-  }
-};
-      ws.onerror = (e) => append('[ERROR] ' + e.message || e);
-      ws.onclose = (e) => append('[CLOSE] ' + e.code + ' ' + (e.reason || ''));
-    };
+    function getRoomFromURL() {
+      const params = new URLSearchParams(location.search);
+      return params.get('code');
+    }
 
-    document.getElementById('send').onclick = () => {
+    function persistRoom(code) {
+      try { localStorage.setItem('ws_room', code); } catch {}
+    }
+
+    function loadPersistedRoom() {
+      try { return localStorage.getItem('ws_room') || ''; } catch { return ''; }
+    }
+
+    function connect(auto = false) {
+      const code = roomInput.value.trim();
+      if (!code) {
+        if (!auto) append('⚠ Room vacío');
+        return;
+      }
+      persistRoom(code);
+
+      // Conecta a tu servidor en Render
+      const url = `wss://socketnuibuilder.onrender.com/bridge?code=${encodeURIComponent(code)}`;
+      try { ws?.close(); } catch {}
+      ws = new WebSocket(url);
+
+      ws.onopen = () => append('[OPEN] conectado a sala ' + code);
+
+      ws.onmessage = async (e) => {
+        if (e.data instanceof Blob) {
+          const txt = await e.data.text();
+          try { append('[IN JSON] ' + JSON.stringify(JSON.parse(txt))); }
+          catch { append('[IN] ' + txt); }
+        } else {
+          try { append('[IN JSON] ' + JSON.stringify(JSON.parse(e.data))); }
+          catch { append('[IN] ' + e.data); }
+        }
+      };
+
+      ws.onerror = (e) => append('[ERROR] ' + (e?.message || ''));
+      ws.onclose = (e) => append('[CLOSE] ' + e.code + ' ' + (e.reason || ''));
+    }
+
+    function sendJSON() {
       if (!ws || ws.readyState !== 1) return append('⚠ No conectado');
-      const text = document.getElementById('msg').value;
-      const payload = { kind:'note', text, ts: Date.now() };
-      ws.send(JSON.stringify(payload));
-      append('[OUT] ' + JSON.stringify(payload));
-      document.getElementById('msg').value = '';
-    };
+      const text = msgInput.value.trim();
+      if (!text) return;
+      try {
+        // si es JSON válido, lo enviamos tal cual
+        JSON.parse(text);
+        ws.send(text);
+        append('[OUT JSON] ' + text);
+      } catch {
+        // si no es JSON, lo envolvemos
+        const payload = JSON.stringify({ text, ts: Date.now() });
+        ws.send(payload);
+        append('[OUT] ' + payload);
+      }
+      msgInput.value = '';
+    }
+
+    // Botones
+    btnConnect.onclick = () => connect(false);
+    btnSend.onclick = () => sendJSON();
+    msgInput.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') { e.preventDefault(); sendJSON(); }
+    });
+
+    // Auto-conexión al cargar
+    (function autoConnectOnLoad() {
+      // 1) Preferimos ?code= de la URL
+      const fromURL = getRoomFromURL();
+      if (fromURL) {
+        roomInput.value = fromURL;
+        connect(true);
+        return;
+      }
+      // 2) Si no, usamos el último guardado
+      const stored = loadPersistedRoom();
+      if (stored) {
+        roomInput.value = stored;
+        connect(true);
+        return;
+      }
+      // 3) Si no hay nada, usa el valor actual del input (por defecto 842913)
+      if (roomInput.value.trim() !== '') connect(true);
+    })();
   </script>
 </body>
 </html>

@@ -1,6 +1,6 @@
 # WS Bridge (Render)
 
-Servidor WebSocket con “salas” por `code`. Listo para Render.
+Servidor WebSocket con “salas” por `code`.
 
 ## Despliegue en Render
 
@@ -10,12 +10,11 @@ Servidor WebSocket con “salas” por `code`. Listo para Render.
 4. Configura:
    - **Environment**: Node
    - **Build Command**: `npm ci`  (o `npm install`)
-   - **Start Command**: `npm start`
-   - **Region**: la más cercana a tus usuarios (EU si estás en España).
+   - **Start Command**: `node server.js`
 5. Deploy.
 
 ### Probar
-- Abre la URL de tu servicio (p. ej. `[https://tu-servicio.onrender.com/test](https://socketnuibuilder.onrender.com/test)`).
+- Abre la URL de tu servicio (p. ej. `https://tu-servicio.onrender.com/test`).
 - En consola verás logs del tester inline, o abre dos pestañas y usa la sala por defecto (`842913`).
 - Cliente WebSocket:
   ```js

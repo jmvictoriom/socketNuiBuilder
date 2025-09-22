@@ -59,8 +59,10 @@
       }
       persistRoom(code);
 
-      // Conecta a tu servidor en Render
-      const url = `wss://socketnuibuilder.onrender.com/bridge?code=${encodeURIComponent(code)}`;
+      // Construye URL dinámicamente según el host actual (fallback a Render si se abre como file://)
+      const host = location.host || 'socketnuibuilder.onrender.com';
+      const scheme = location.protocol === 'https:' ? 'wss' : (location.protocol === 'http:' ? 'ws' : 'wss');
+      const url = `${scheme}://${host}/bridge?code=${encodeURIComponent(code)}`;
       try { ws?.close(); } catch {}
       ws = new WebSocket(url);
 

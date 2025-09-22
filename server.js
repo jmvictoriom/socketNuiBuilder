@@ -9,22 +9,63 @@ const server = http.createServer((req, res) => {
     res.writeHead(200, { 'content-type': 'text/plain' });
     return res.end('ok');
   }
+  if (pathname === '/test') {
+    res.writeHead(200, { 'content-type': 'text/html; charset=utf-8' });
+    return res.end(`<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <title>WS Tester</title>
+  <style>
+    body { font-family: sans-serif; max-width: 600px; margin: 2rem auto; }
+    input, button { padding: 8px; margin: 4px 0; border-radius: 6px; border: 1px solid #ccc; }
+    #log { border: 1px solid #ddd; border-radius: 6px; padding: 8px; height: 250px; overflow-y: auto; background: #fafafa; font-size: 14px; }
+  </style>
+</head>
+<body>
+  <h1>Tester WebSocket</h1>
+  <label>Room code: <input id="room" value="842913" /></label><br>
+  <button id="connect">Conectar</button>
+  <br><br>
+  <input id="msg" placeholder="Escribe un mensaje..." style="width:80%" />
+  <button id="send">Enviar</button>
+
+  <h3>Log:</h3>
+  <div id="log"></div>
+
+  <script>
+    let ws;
+    const logBox = document.getElementById('log');
+    const append = (txt) => {
+      const p = document.createElement('div');
+      p.textContent = new Date().toLocaleTimeString() + ' ' + txt;
+      logBox.prepend(p);
+    };
+
+    document.getElementById('connect').onclick = () => {
+      const code = document.getElementById('room').value;
+      const url = 'wss://' + location.host + '/bridge?code=' + encodeURIComponent(code);
+      ws = new WebSocket(url);
+      ws.onopen = () => append('[OPEN] conectado a sala ' + code);
+      ws.onmessage = (e) => append('[IN] ' + e.data);
+      ws.onerror = (e) => append('[ERROR]');
+      ws.onclose = (e) => append('[CLOSE] ' + e.code + ' ' + (e.reason || ''));
+    };
+
+    document.getElementById('send').onclick = () => {
+      if (!ws || ws.readyState !== 1) return append('⚠ No conectado');
+      const text = document.getElementById('msg').value;
+      const payload = { kind:'note', text, ts: Date.now() };
+      ws.send(JSON.stringify(payload));
+      append('[OUT] ' + JSON.stringify(payload));
+      document.getElementById('msg').value = '';
+    };
+  </script>
+</body>
+</html>`);
+  }
   res.writeHead(200, { 'content-type': 'text/html; charset=utf-8' });
-  res.end(`<!doctype html>
-    <meta charset="utf-8"/>
-    <title>WS Bridge</title>
-    <h1>WS Bridge on Render ✅</h1>
-    <p>Endpoint WS: <code>wss://TU-SERVICIO.onrender.com/bridge?code=842913</code></p>
-    <script>
-      // tester básico en el navegador
-      const code = '842913';
-      const ws = new WebSocket((location.protocol === 'https:' ? 'wss' : 'ws') + '://' + location.host + '/bridge?code=' + encodeURIComponent(code));
-      ws.onopen    = () => { console.log('[OPEN]'); ws.send(JSON.stringify({ hello:'world', ts: Date.now(), code })); };
-      ws.onmessage = (e) => console.log('[IN]', e.data);
-      ws.onerror   = (e) => console.log('[ERROR]', e);
-      ws.onclose   = (e) => console.log('[CLOSE]', e.code, e.reason || '(no reason)');
-    </script>
-  `);
+  res.end('<h1>WS Bridge on Render ✅</h1><p>Visita <a href="/test">/test</a> para probar.</p>');
 });
 
 // --- WS server ---

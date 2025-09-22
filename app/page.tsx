@@ -1,5 +1,6 @@
 'use client';
 import { useEffect, useRef, useState } from 'react';
+export const dynamic = 'force-static';
 
 export default function Home() {
   const [code, setCode] = useState('842913');

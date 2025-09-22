@@ -105,11 +105,15 @@ wss.on('connection', (ws, req) => {
   // Presencia simple
   safeSend(ws, JSON.stringify({ system: 'joined', count: set.size, code }));
 
-  ws.on('message', (data) => {
-    // retransmite a todos de la sala menos al emisor
+  ws.on('message', (data, isBinary) => {
+    // convierte a string si no es binario
+    const outgoing = isBinary ? data : data.toString();
+
+    // retransmite a todos en la sala, excepto al emisor
     for (const c of set) {
       if (c !== ws && c.readyState === 1) {
-        safeSend(c, data);
+        // si quieres siempre string/JSON:
+        c.send(outgoing); // o JSON.stringify(JSON.parse(outgoing)) si sabes que es JSON
       }
     }
   });

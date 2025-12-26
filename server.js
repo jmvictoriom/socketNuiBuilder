@@ -82,6 +82,8 @@ const wss = new WebSocketServer({ noServer: true });
 
 // Salas por código: Map<string, Set<WebSocket>>
 const rooms = new Map();
+// Último mensaje por sala: Map<string, string>
+const lastMessages = new Map();
 // Conjunto de todos los sockets para heartbeat
 const allClients = new Set();
 
@@ -113,6 +115,11 @@ wss.on('connection', (ws, req) => {
 
   // Presencia simple
   safeSend(ws, JSON.stringify({ system: 'joined', count: set.size, code }));
+  // Enviar el último mensaje de la sala al nuevo cliente (si existe)
+  const lastMessage = lastMessages.get(code);
+  if (lastMessage) {
+    safeSend(ws, lastMessage);
+  }
 
 ws.on('message', (data, isBinary) => {
   // Normaliza el mensaje a string
@@ -120,6 +127,8 @@ ws.on('message', (data, isBinary) => {
   // Si no es JSON válido, lo envolvemos como JSON { text }
   try { JSON.parse(outgoing); }
   catch { outgoing = JSON.stringify({ text: outgoing }); }
+  // Guardar último mensaje de la sala
+  lastMessages.set(code, outgoing);
   // Retransmite a todos en la sala menos al emisor
   for (const c of set) {
     if (c !== ws && c.readyState === 1) {
@@ -132,7 +141,10 @@ ws.on('message', (data, isBinary) => {
     try {
       set.delete(ws);
       allClients.delete(ws);
-      if (set.size === 0) rooms.delete(code);
+      if (set.size === 0) {
+        rooms.delete(code);
+        lastMessages.delete(code);
+      }
     } catch {}
   };
 

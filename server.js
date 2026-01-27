@@ -117,9 +117,18 @@ wss.on('connection', (ws, req) => {
 ws.on('message', (data, isBinary) => {
   // Normaliza el mensaje a string
   let outgoing = isBinary ? data.toString() : data.toString();
-  // Si no es JSON válido, lo envolvemos como JSON { text }
-  try { JSON.parse(outgoing); }
-  catch { outgoing = JSON.stringify({ json: outgoing }); }
+  // Si no es JSON válido, lo envolvemos como JSON { json }
+  try {
+    const parsed = JSON.parse(outgoing);
+    if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
+      const inferredType = inferMessageType(parsed);
+      if (inferredType && !parsed.type) parsed.type = inferredType;
+      const typeLabel = parsed.type || inferredType || 'system';
+      outgoing = `${typeLabel}: ${JSON.stringify(parsed)}`;
+    }
+  } catch {
+    outgoing = JSON.stringify({ json: outgoing, type: 'system' });
+  }
   // Retransmite a todos en la sala menos al emisor
   for (const c of set) {
     if (c !== ws && c.readyState === 1) {
@@ -161,4 +170,16 @@ server.listen(PORT, () => {
 // Helper
 function safeSend(ws, data) {
   try { ws.send(data); } catch {}
+}
+
+// Detecta el tipo según campos raíz del JSON
+function inferMessageType(payload) {
+  if (payload && typeof payload === 'object' && !Array.isArray(payload)) {
+    if (Object.prototype.hasOwnProperty.call(payload, 'id')) return 'screen';
+    if (Object.prototype.hasOwnProperty.call(payload, 'name') &&
+        Object.prototype.hasOwnProperty.call(payload, 'properties')) return 'theme';
+    if (Object.prototype.hasOwnProperty.call(payload, 'global') &&
+        Object.prototype.hasOwnProperty.call(payload, 'style')) return 'fonts';
+  }
+  return 'system';
 }

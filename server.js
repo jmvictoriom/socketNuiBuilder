@@ -180,6 +180,8 @@ function inferMessageType(payload) {
         Object.prototype.hasOwnProperty.call(payload, 'properties')) return 'theme';
     if (Object.prototype.hasOwnProperty.call(payload, 'global') &&
         Object.prototype.hasOwnProperty.call(payload, 'style')) return 'fonts';
+    if (Object.prototype.hasOwnProperty.call(payload, 'screens') &&
+        Object.prototype.hasOwnProperty.call(payload, 'flows')) return 'hashi';
   }
   return 'system';
 }

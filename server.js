@@ -124,7 +124,7 @@ ws.on('message', (data, isBinary) => {
       const inferredType = inferMessageType(parsed);
       if (inferredType && !parsed.type) parsed.type = inferredType;
       const typeLabel = parsed.type || inferredType || 'system';
-      outgoing = `${typeLabel}: ${JSON.stringify(parsed)}`;
+      outgoing = `{${inferredType}: ${JSON.stringify(parsed)}}`;
     }
   } catch {
     outgoing = JSON.stringify({ json: outgoing, type: 'system' });

@@ -119,7 +119,7 @@ ws.on('message', (data, isBinary) => {
   let outgoing = isBinary ? data.toString() : data.toString();
   // Si no es JSON válido, lo envolvemos como JSON { text }
   try { JSON.parse(outgoing); }
-  catch { outgoing = JSON.stringify({ text: outgoing }); }
+  catch { outgoing = JSON.stringify({ json: outgoing }); }
   // Retransmite a todos en la sala menos al emisor
   for (const c of set) {
     if (c !== ws && c.readyState === 1) {

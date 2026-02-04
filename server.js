@@ -82,6 +82,8 @@ const wss = new WebSocketServer({ noServer: true });
 
 // Salas por código: Map<string, Set<WebSocket>>
 const rooms = new Map();
+// Último mensaje "screen" recibido por sala (solo mensajes entrantes, no del servidor)
+const lastScreenMessages = new Map();
 // Conjunto de todos los sockets para heartbeat
 const allClients = new Set();
 
@@ -114,28 +116,36 @@ wss.on('connection', (ws, req) => {
   // Presencia simple
   safeSend(ws, JSON.stringify({ system: 'joined', count: set.size, code }));
 
-ws.on('message', (data, isBinary) => {
-  // Normaliza el mensaje a string
-  let outgoing = isBinary ? data.toString() : data.toString();
-  // Si no es JSON válido, lo envolvemos como JSON { json }
-  try {
-    const parsed = JSON.parse(outgoing);
-    if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
-      const inferredType = inferMessageType(parsed);
-      if (inferredType && !parsed.type) parsed.type = inferredType;
-      const typeLabel = parsed.type || inferredType || 'system';
-      outgoing = `{"${inferredType}": ${JSON.stringify(parsed)}}`;
+  // Entrega el último mensaje "screen" de la sala (solo si provino de un cliente)
+  const last = lastScreenMessages.get(code);
+  if (last) safeSend(ws, last);
+
+  ws.on('message', (data, isBinary) => {
+    // Normaliza el mensaje a string
+    let outgoing = isBinary ? data.toString() : data.toString();
+    // Si no es JSON válido, lo envolvemos como JSON { json }
+    try {
+      const parsed = JSON.parse(outgoing);
+      if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
+        const inferredType = inferMessageType(parsed);
+        if (inferredType && !parsed.type) parsed.type = inferredType;
+        const typeLabel = parsed.type || inferredType || 'system';
+        outgoing = `{"${inferredType}": ${JSON.stringify(parsed)}}`;
+        // Guarda solo el último mensaje de tipo "screen"
+        if (typeLabel === 'screen' || inferredType === 'screen') {
+          lastScreenMessages.set(code, outgoing);
+        }
+      }
+    } catch {
+      outgoing = JSON.stringify({ json: outgoing, type: 'system' });
     }
-  } catch {
-    outgoing = JSON.stringify({ json: outgoing, type: 'system' });
-  }
-  // Retransmite a todos en la sala menos al emisor
-  for (const c of set) {
-    if (c !== ws && c.readyState === 1) {
-      safeSend(c, outgoing);
+    // Retransmite a todos en la sala menos al emisor
+    for (const c of set) {
+      if (c !== ws && c.readyState === 1) {
+        safeSend(c, outgoing);
+      }
     }
-  }
-});
+  });
 
   const cleanup = () => {
     try {
